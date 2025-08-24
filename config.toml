@@ -5,7 +5,7 @@ address = "127.0.0.1:8080"
 uri = "mongodb://localhost:27017"
 maxpoolsize = 10
 connecttimeout = "3s"
-database = "nitask"
+taskdb = "nitask"
 
 [logger]
 level = "debug"

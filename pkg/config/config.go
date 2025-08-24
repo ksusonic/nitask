@@ -16,7 +16,8 @@ type MongoDBConfig struct {
 	URI            string
 	MaxPoolSize    uint64
 	ConnectTimeout time.Duration
-	Database       string
+
+	TaskDB string
 }
 
 type LoggerConfig struct {

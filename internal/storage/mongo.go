@@ -13,6 +13,9 @@ import (
 
 type Mongo struct {
 	client *mongo.Client
+
+	// databases are lazy-init
+	databases databases
 }
 
 func NewMongo(config config.MongoDBConfig) (*Mongo, error) {

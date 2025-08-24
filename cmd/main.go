@@ -2,60 +2,28 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
-
-	"github.com/joho/godotenv"
+	"github.com/ksusonic/nitask/internal/app"
+	"github.com/ksusonic/nitask/pkg/config"
+	"github.com/ksusonic/nitask/pkg/logger"
 )
 
 func main() {
-	err := godotenv.Load()
+	cfg, err := config.LoadConfig("config.toml")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatalf("load config: %v", err)
 	}
 
-	uri := os.Getenv("MONGODB_URI")
-	docs := "www.mongodb.com/docs/drivers/go/current/"
-	if uri == "" {
-		log.Fatal("Set your 'MONGODB_URI' environment variable. " +
-			"See: " + docs +
-			"usage-examples/#environment-variable")
-	}
-	client, err := mongo.Connect(options.Client().
-		ApplyURI(uri))
+	log := logger.NewLogger(cfg.Logger)
+
+	application, err := app.New(cfg, log)
 	if err != nil {
-		panic(err)
+		log.Error("init app", slog.Any("error", err))
+		os.Exit(1)
 	}
 
-	defer func() {
-		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
-		}
-	}()
-
-	coll := client.Database("sample_mflix").Collection("movies")
-	title := "Back to the Future"
-
-	var result bson.M
-	err = coll.FindOne(context.TODO(), bson.D{{Key: "title", Value: title}}).
-		Decode(&result)
-	if err == mongo.ErrNoDocuments {
-		fmt.Printf("No document was found with the title %s\n", title)
-		return
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	jsonData, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%s\n", jsonData)
+	application.Run(context.Background())
 }

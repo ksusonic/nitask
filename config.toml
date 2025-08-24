@@ -1,0 +1,13 @@
+[server]
+address = "127.0.0.1:8080"
+
+[mongodb]
+uri = "mongodb://localhost:27017"
+maxpoolsize = 10
+connecttimeout = "3s"
+database = "nitask"
+
+[logger]
+level = "debug"
+format = "text"
+output = "stdout"

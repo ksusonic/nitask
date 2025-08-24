@@ -1,4 +1,6 @@
 name: Validate OpenAPI on Change
+permissions:
+  contents: read
 
 on:
   push:

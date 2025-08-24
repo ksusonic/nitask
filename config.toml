@@ -1,5 +1,6 @@
 [server]
 address = "127.0.0.1:8080"
+mode = "debug"             # set release for production
 
 [mongodb]
 uri = "mongodb://localhost:27017"

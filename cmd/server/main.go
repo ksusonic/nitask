@@ -11,12 +11,13 @@ import (
 
 	"github.com/ksusonic/nitask/internal/app"
 	"github.com/ksusonic/nitask/internal/server"
+	"github.com/ksusonic/nitask/internal/server/handler"
 )
 
 const shutdownTimeout = 3 * time.Second
 
 func main() {
-	app, err := app.New()
+	app, err := app.New(context.Background())
 	if err != nil {
 		log.Fatalf("init app: %v", err)
 	}
@@ -27,9 +28,17 @@ func main() {
 func run(app *app.App) int {
 	ctx := context.Background()
 
+	app.TicketController()
+
 	server := &http.Server{
-		Addr:              app.Config().Server.Address,
-		Handler:           server.New(app.Handler()),
+		Addr: app.Config().Server.Address,
+		Handler: server.New(
+			app.Config().Server,
+			&handler.Deps{
+				TicketController: app.TicketController(),
+				Logger:           app.Logger(),
+			},
+		),
 		ReadHeaderTimeout: server.ReadHeaderTimeout,
 	}
 
@@ -44,7 +53,7 @@ func run(app *app.App) int {
 	}()
 
 	<-quit
-	app.Logger().Info("interrupt signal")
+	app.Logger().Info("stopping server")
 
 	ctx, timeout := context.WithTimeout(ctx, shutdownTimeout)
 	defer timeout()

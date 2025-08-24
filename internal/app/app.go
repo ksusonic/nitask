@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/ksusonic/nitask/internal/handler"
+	ticketController "github.com/ksusonic/nitask/internal/controller/ticket"
+	ticketRepo "github.com/ksusonic/nitask/internal/repository/ticket"
 	"github.com/ksusonic/nitask/internal/storage"
 	"github.com/ksusonic/nitask/pkg/config"
 	"github.com/ksusonic/nitask/pkg/logger"
@@ -15,9 +16,11 @@ type App struct {
 	config *config.Config
 	log    *slog.Logger
 	mongo  *storage.Mongo
+
+	ticketController *ticketController.Controller
 }
 
-func New() (*App, error) {
+func New(ctx context.Context) (*App, error) {
 	cfg, err := config.LoadConfig("config.toml")
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
@@ -30,10 +33,16 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("init storage: %w", err)
 	}
 
+	ticketStorage, err := ticketRepo.NewRepository(ctx, mongo.Client(), true)
+	if err != nil {
+		return nil, fmt.Errorf("init ticket storage: %w", err)
+	}
+
 	return &App{
-		config: cfg,
-		log:    log,
-		mongo:  mongo,
+		config:           cfg,
+		log:              log,
+		mongo:            mongo,
+		ticketController: ticketController.New(ticketStorage, log),
 	}, nil
 }
 
@@ -49,8 +58,8 @@ func (a *App) MongoDB() *storage.Mongo {
 	return a.mongo
 }
 
-func (a *App) Handler() Handler {
-	return handler.New()
+func (a *App) TicketController() *ticketController.Controller {
+	return a.ticketController
 }
 
 func (a *App) Close(ctx context.Context) error {

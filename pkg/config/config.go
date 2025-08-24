@@ -10,6 +10,7 @@ type Config struct {
 
 type ServerConfig struct {
 	Address string `toml:"address"`
+	Mode    string `toml:"mode"`
 }
 
 type MongoDBConfig struct {

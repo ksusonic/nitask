@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ksusonic/nitask/internal/server/handler"
 	"github.com/ksusonic/nitask/pkg/api"
+	"github.com/ksusonic/nitask/pkg/config"
 )
 
 const (
@@ -15,10 +17,15 @@ type Server struct {
 	*gin.Engine
 }
 
-func New(impl api.StrictServerInterface) *Server {
+func New(
+	cfg config.ServerConfig,
+	handlerDeps *handler.Deps,
+) *Server {
 	r := gin.Default()
 
-	server := api.NewStrictHandler(impl, nil)
+	gin.SetMode(cfg.Mode)
+
+	server := api.NewStrictHandler(handler.New(handlerDeps), nil)
 
 	api.RegisterHandlers(r, server)
 

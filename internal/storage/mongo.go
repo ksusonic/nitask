@@ -15,9 +15,6 @@ const connectTimeout = 3 * time.Second
 
 type Mongo struct {
 	client *mongo.Client
-
-	// databases are lazy-init
-	databases databases
 }
 
 func NewMongo(config config.MongoDBConfig) (*Mongo, error) {

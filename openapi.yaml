@@ -1,25 +1,208 @@
 openapi: "3.0.0"
 info:
   version: 1.0.0
-  title: Minimal ping API server
+  title: Minimal Task Tracker API
 paths:
   /ping:
     get:
+      summary: Healthcheck
       responses:
         "200":
-          description: pet response
+          description: Server is alive
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Pong"
+                type: object
+                properties:
+                  ping:
+                    type: string
+                    example: pong
+                required:
+                  - ping
+
+  /tickets:
+    get:
+      tags:
+        - ticket-api
+      summary: List all tickets
+      parameters:
+        - name: queue
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+
+    post:
+      tags:
+        - ticket-api
+      summary: Create a new ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketCreate"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{key}:
+    get:
+      tags:
+        - ticket-api
+      summary: Get ticket by key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ticket response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
+
+    patch:
+      tags:
+        - ticket-api
+      summary: Update a ticket partially
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketUpdate"
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketPatch"
+        "404":
+          description: Ticket not found
+
+    delete:
+      tags:
+        - ticket-api
+      summary: Delete a ticket
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Ticket deleted
+        "404":
+          description: Ticket not found
+
 components:
   schemas:
-    # base types
-    Pong:
+    Ticket:
       type: object
       required:
-        - ping
+        - key
+        - title
+        - status
+        - description
+        - created_at
+        - updated_at
       properties:
-        ping:
+        key:
           type: string
-          example: pong
+          example: "ISSUE-12345"
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, done]
+          example: "open"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketCreate:
+      type: object
+      required:
+        - queue
+        - title
+      properties:
+        queue:
+          type: string
+          example: "BACK"
+        title:
+          type: string
+        description:
+          type: string
+        idempotency_key:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    TicketUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, done]
+
+    TicketPatch:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, done]

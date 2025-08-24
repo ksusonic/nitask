@@ -8,21 +8,109 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Pong defines model for Pong.
-type Pong struct {
-	Ping string `json:"ping"`
+// Defines values for TicketStatus.
+const (
+	TicketStatusDone       TicketStatus = "done"
+	TicketStatusInProgress TicketStatus = "in_progress"
+	TicketStatusOpen       TicketStatus = "open"
+)
+
+// Defines values for TicketPatchStatus.
+const (
+	TicketPatchStatusDone       TicketPatchStatus = "done"
+	TicketPatchStatusInProgress TicketPatchStatus = "in_progress"
+	TicketPatchStatusOpen       TicketPatchStatus = "open"
+)
+
+// Defines values for TicketUpdateStatus.
+const (
+	Done       TicketUpdateStatus = "done"
+	InProgress TicketUpdateStatus = "in_progress"
+	Open       TicketUpdateStatus = "open"
+)
+
+// Ticket defines model for Ticket.
+type Ticket struct {
+	CreatedAt   time.Time    `json:"created_at"`
+	Description string       `json:"description"`
+	Key         string       `json:"key"`
+	Status      TicketStatus `json:"status"`
+	Title       string       `json:"title"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 }
+
+// TicketStatus defines model for Ticket.Status.
+type TicketStatus string
+
+// TicketCreate defines model for TicketCreate.
+type TicketCreate struct {
+	Description    *string             `json:"description,omitempty"`
+	IdempotencyKey *openapi_types.UUID `json:"idempotency_key,omitempty"`
+	Queue          string              `json:"queue"`
+	Title          string              `json:"title"`
+}
+
+// TicketPatch defines model for TicketPatch.
+type TicketPatch struct {
+	Description *string            `json:"description,omitempty"`
+	Status      *TicketPatchStatus `json:"status,omitempty"`
+	Title       *string            `json:"title,omitempty"`
+}
+
+// TicketPatchStatus defines model for TicketPatch.Status.
+type TicketPatchStatus string
+
+// TicketUpdate defines model for TicketUpdate.
+type TicketUpdate struct {
+	Description *string             `json:"description,omitempty"`
+	Status      *TicketUpdateStatus `json:"status,omitempty"`
+	Title       *string             `json:"title,omitempty"`
+}
+
+// TicketUpdateStatus defines model for TicketUpdate.Status.
+type TicketUpdateStatus string
+
+// GetTicketsParams defines parameters for GetTickets.
+type GetTicketsParams struct {
+	Queue  string `form:"queue" json:"queue"`
+	Limit  *int   `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int   `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// PostTicketsJSONRequestBody defines body for PostTickets for application/json ContentType.
+type PostTicketsJSONRequestBody = TicketCreate
+
+// PatchTicketsKeyJSONRequestBody defines body for PatchTicketsKey for application/json ContentType.
+type PatchTicketsKeyJSONRequestBody = TicketUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-
+	// Healthcheck
 	// (GET /ping)
 	GetPing(c *gin.Context)
+	// List all tickets
+	// (GET /tickets)
+	GetTickets(c *gin.Context, params GetTicketsParams)
+	// Create a new ticket
+	// (POST /tickets)
+	PostTickets(c *gin.Context)
+	// Delete a ticket
+	// (DELETE /tickets/{key})
+	DeleteTicketsKey(c *gin.Context, key string)
+	// Get ticket by key
+	// (GET /tickets/{key})
+	GetTicketsKey(c *gin.Context, key string)
+	// Update a ticket partially
+	// (PATCH /tickets/{key})
+	PatchTicketsKey(c *gin.Context, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -45,6 +133,140 @@ func (siw *ServerInterfaceWrapper) GetPing(c *gin.Context) {
 	}
 
 	siw.Handler.GetPing(c)
+}
+
+// GetTickets operation middleware
+func (siw *ServerInterfaceWrapper) GetTickets(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTicketsParams
+
+	// ------------- Required query parameter "queue" -------------
+
+	if paramValue := c.Query("queue"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument queue is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "queue", c.Request.URL.Query(), &params.Queue)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter queue: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", c.Request.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", c.Request.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTickets(c, params)
+}
+
+// PostTickets operation middleware
+func (siw *ServerInterfaceWrapper) PostTickets(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostTickets(c)
+}
+
+// DeleteTicketsKey operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTicketsKey(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", c.Param("key"), &key, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter key: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteTicketsKey(c, key)
+}
+
+// GetTicketsKey operation middleware
+func (siw *ServerInterfaceWrapper) GetTicketsKey(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", c.Param("key"), &key, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter key: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTicketsKey(c, key)
+}
+
+// PatchTicketsKey operation middleware
+func (siw *ServerInterfaceWrapper) PatchTicketsKey(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", c.Param("key"), &key, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter key: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchTicketsKey(c, key)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -75,6 +297,11 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/ping", wrapper.GetPing)
+	router.GET(options.BaseURL+"/tickets", wrapper.GetTickets)
+	router.POST(options.BaseURL+"/tickets", wrapper.PostTickets)
+	router.DELETE(options.BaseURL+"/tickets/:key", wrapper.DeleteTicketsKey)
+	router.GET(options.BaseURL+"/tickets/:key", wrapper.GetTicketsKey)
+	router.PATCH(options.BaseURL+"/tickets/:key", wrapper.PatchTicketsKey)
 }
 
 type GetPingRequestObject struct {
@@ -84,7 +311,9 @@ type GetPingResponseObject interface {
 	VisitGetPingResponse(w http.ResponseWriter) error
 }
 
-type GetPing200JSONResponse Pong
+type GetPing200JSONResponse struct {
+	Ping string `json:"ping"`
+}
 
 func (response GetPing200JSONResponse) VisitGetPingResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -93,11 +322,135 @@ func (response GetPing200JSONResponse) VisitGetPingResponse(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetTicketsRequestObject struct {
+	Params GetTicketsParams
+}
+
+type GetTicketsResponseObject interface {
+	VisitGetTicketsResponse(w http.ResponseWriter) error
+}
+
+type GetTickets200JSONResponse []Ticket
+
+func (response GetTickets200JSONResponse) VisitGetTicketsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostTicketsRequestObject struct {
+	Body *PostTicketsJSONRequestBody
+}
+
+type PostTicketsResponseObject interface {
+	VisitPostTicketsResponse(w http.ResponseWriter) error
+}
+
+type PostTickets201JSONResponse Ticket
+
+func (response PostTickets201JSONResponse) VisitPostTicketsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTicketsKeyRequestObject struct {
+	Key string `json:"key"`
+}
+
+type DeleteTicketsKeyResponseObject interface {
+	VisitDeleteTicketsKeyResponse(w http.ResponseWriter) error
+}
+
+type DeleteTicketsKey204Response struct {
+}
+
+func (response DeleteTicketsKey204Response) VisitDeleteTicketsKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteTicketsKey404Response struct {
+}
+
+func (response DeleteTicketsKey404Response) VisitDeleteTicketsKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetTicketsKeyRequestObject struct {
+	Key string `json:"key"`
+}
+
+type GetTicketsKeyResponseObject interface {
+	VisitGetTicketsKeyResponse(w http.ResponseWriter) error
+}
+
+type GetTicketsKey200JSONResponse Ticket
+
+func (response GetTicketsKey200JSONResponse) VisitGetTicketsKeyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTicketsKey404Response struct {
+}
+
+func (response GetTicketsKey404Response) VisitGetTicketsKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PatchTicketsKeyRequestObject struct {
+	Key  string `json:"key"`
+	Body *PatchTicketsKeyJSONRequestBody
+}
+
+type PatchTicketsKeyResponseObject interface {
+	VisitPatchTicketsKeyResponse(w http.ResponseWriter) error
+}
+
+type PatchTicketsKey200JSONResponse TicketPatch
+
+func (response PatchTicketsKey200JSONResponse) VisitPatchTicketsKeyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchTicketsKey404Response struct {
+}
+
+func (response PatchTicketsKey404Response) VisitPatchTicketsKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-
+	// Healthcheck
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
+	// List all tickets
+	// (GET /tickets)
+	GetTickets(ctx context.Context, request GetTicketsRequestObject) (GetTicketsResponseObject, error)
+	// Create a new ticket
+	// (POST /tickets)
+	PostTickets(ctx context.Context, request PostTicketsRequestObject) (PostTicketsResponseObject, error)
+	// Delete a ticket
+	// (DELETE /tickets/{key})
+	DeleteTicketsKey(ctx context.Context, request DeleteTicketsKeyRequestObject) (DeleteTicketsKeyResponseObject, error)
+	// Get ticket by key
+	// (GET /tickets/{key})
+	GetTicketsKey(ctx context.Context, request GetTicketsKeyRequestObject) (GetTicketsKeyResponseObject, error)
+	// Update a ticket partially
+	// (PATCH /tickets/{key})
+	PatchTicketsKey(ctx context.Context, request PatchTicketsKeyRequestObject) (PatchTicketsKeyResponseObject, error)
 }
 
 type StrictHandlerFunc = strictgin.StrictGinHandlerFunc
@@ -130,6 +483,155 @@ func (sh *strictHandler) GetPing(ctx *gin.Context) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(GetPingResponseObject); ok {
 		if err := validResponse.VisitGetPingResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTickets operation middleware
+func (sh *strictHandler) GetTickets(ctx *gin.Context, params GetTicketsParams) {
+	var request GetTicketsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTickets(ctx, request.(GetTicketsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTickets")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetTicketsResponseObject); ok {
+		if err := validResponse.VisitGetTicketsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostTickets operation middleware
+func (sh *strictHandler) PostTickets(ctx *gin.Context) {
+	var request PostTicketsRequestObject
+
+	var body PostTicketsJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PostTickets(ctx, request.(PostTicketsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostTickets")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(PostTicketsResponseObject); ok {
+		if err := validResponse.VisitPostTicketsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteTicketsKey operation middleware
+func (sh *strictHandler) DeleteTicketsKey(ctx *gin.Context, key string) {
+	var request DeleteTicketsKeyRequestObject
+
+	request.Key = key
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteTicketsKey(ctx, request.(DeleteTicketsKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteTicketsKey")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(DeleteTicketsKeyResponseObject); ok {
+		if err := validResponse.VisitDeleteTicketsKeyResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTicketsKey operation middleware
+func (sh *strictHandler) GetTicketsKey(ctx *gin.Context, key string) {
+	var request GetTicketsKeyRequestObject
+
+	request.Key = key
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTicketsKey(ctx, request.(GetTicketsKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTicketsKey")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetTicketsKeyResponseObject); ok {
+		if err := validResponse.VisitGetTicketsKeyResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchTicketsKey operation middleware
+func (sh *strictHandler) PatchTicketsKey(ctx *gin.Context, key string) {
+	var request PatchTicketsKeyRequestObject
+
+	request.Key = key
+
+	var body PatchTicketsKeyJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchTicketsKey(ctx, request.(PatchTicketsKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchTicketsKey")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(PatchTicketsKeyResponseObject); ok {
+		if err := validResponse.VisitPatchTicketsKeyResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

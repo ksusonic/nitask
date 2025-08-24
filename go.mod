@@ -5,13 +5,16 @@ go 1.25.0
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
+	github.com/AlekSi/pointer v1.2.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/gin-gonic/gin v1.10.1
+	github.com/google/uuid v1.5.0
 	github.com/oapi-codegen/runtime v1.1.2
 	go.mongodb.org/mongo-driver/v2 v2.3.0
 )
 
 require (
+	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect

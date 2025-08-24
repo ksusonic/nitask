@@ -3,9 +3,8 @@ address = "127.0.0.1:8080"
 
 [mongodb]
 uri = "mongodb://localhost:27017"
-maxpoolsize = 10
-connecttimeout = "3s"
-taskdb = "nitask"
+max_pool_size = 10
+connect_timeout = "3s"
 
 [logger]
 level = "debug"

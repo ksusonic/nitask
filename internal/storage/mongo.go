@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+const connectTimeout = 3 * time.Second
+
 type Mongo struct {
 	client *mongo.Client
 
@@ -30,10 +32,10 @@ func NewMongo(config config.MongoDBConfig) (*Mongo, error) {
 		return nil, fmt.Errorf("mongo connect: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 	defer cancel()
 
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+	if err = client.Ping(ctx, readpref.Primary()); err != nil {
 		return nil, fmt.Errorf("ping mongodb instance: %w", err)
 	}
 

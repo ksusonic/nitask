@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 
 	"github.com/ksusonic/nitask/internal/handler"
@@ -21,7 +20,7 @@ type App struct {
 func New() (*App, error) {
 	cfg, err := config.LoadConfig("config.toml")
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		return nil, fmt.Errorf("load config: %w", err)
 	}
 
 	log := logger.NewLogger(cfg.Logger)
@@ -59,7 +58,7 @@ func (a *App) Close(ctx context.Context) error {
 		return fmt.Errorf("close mongo: %w", err)
 	}
 
-	a.log.Debug("closed mongo")
+	a.log.DebugContext(ctx, "closed mongo")
 
 	return nil
 }

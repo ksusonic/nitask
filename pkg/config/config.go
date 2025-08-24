@@ -3,25 +3,23 @@ package config
 import "time"
 
 type Config struct {
-	Server  ServerConfig
-	MongoDB MongoDBConfig
-	Logger  LoggerConfig
+	Server  ServerConfig  `toml:"server"`
+	MongoDB MongoDBConfig `toml:"mongodb"`
+	Logger  LoggerConfig  `toml:"logger"`
 }
 
 type ServerConfig struct {
-	Address string
+	Address string `toml:"address"`
 }
 
 type MongoDBConfig struct {
-	URI            string
-	MaxPoolSize    uint64
-	ConnectTimeout time.Duration
-
-	TaskDB string
+	URI            string        `toml:"uri"`
+	MaxPoolSize    uint64        `toml:"max_pool_size"`
+	ConnectTimeout time.Duration `toml:"connect_timeout"`
 }
 
 type LoggerConfig struct {
-	Level  string
-	Format string
-	Output string
+	Level  string `toml:"level"`
+	Format string `toml:"format"`
+	Output string `toml:"output"`
 }

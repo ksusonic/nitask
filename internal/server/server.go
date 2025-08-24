@@ -1,8 +1,14 @@
 package server
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ksusonic/nitask/pkg/api"
+)
+
+const (
+	ReadHeaderTimeout = 5 * time.Second
 )
 
 type Server struct {

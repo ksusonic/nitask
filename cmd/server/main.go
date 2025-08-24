@@ -13,6 +13,8 @@ import (
 	"github.com/ksusonic/nitask/internal/server"
 )
 
+const shutdownTimeout = 3 * time.Second
+
 func main() {
 	app, err := app.New()
 	if err != nil {
@@ -26,8 +28,9 @@ func run(app *app.App) int {
 	ctx := context.Background()
 
 	server := &http.Server{
-		Addr:    app.Config().Server.Address,
-		Handler: server.New(app.Handler()),
+		Addr:              app.Config().Server.Address,
+		Handler:           server.New(app.Handler()),
+		ReadHeaderTimeout: server.ReadHeaderTimeout,
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -43,7 +46,7 @@ func run(app *app.App) int {
 	<-quit
 	app.Logger().Info("interrupt signal")
 
-	ctx, timeout := context.WithTimeout(ctx, 3*time.Second)
+	ctx, timeout := context.WithTimeout(ctx, shutdownTimeout)
 	defer timeout()
 
 	shutdown := make(chan struct{})

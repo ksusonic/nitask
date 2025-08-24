@@ -12,11 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-const (
-	dbName         = "task"
-	collectionName = "tickets"
-)
-
 func (s *Repository) List(ctx context.Context, in models.TicketListIn) ([]models.Ticket, error) {
 	cur, err := s.Collection.Find(
 		ctx,

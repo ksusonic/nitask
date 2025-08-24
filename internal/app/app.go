@@ -33,7 +33,7 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init storage: %w", err)
 	}
 
-	ticketStorage, err := ticketRepo.NewRepository(ctx, mongo.Client(), true)
+	ticketStorage, err := ticketRepo.NewRepository(ctx, mongo.TicketDB(), true)
 	if err != nil {
 		return nil, fmt.Errorf("init ticket storage: %w", err)
 	}

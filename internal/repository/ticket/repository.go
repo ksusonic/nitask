@@ -7,12 +7,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+const (
+	collectionName = "tickets"
+)
+
 type Repository struct {
 	Collection *mongo.Collection
 }
 
-func NewRepository(ctx context.Context, client *mongo.Client, withEnsureIndexes bool) (*Repository, error) {
-	collection := client.Database(dbName).Collection(collectionName)
+func NewRepository(ctx context.Context, database *mongo.Database, withEnsureIndexes bool) (*Repository, error) {
+	collection := database.Collection(collectionName)
 
 	if withEnsureIndexes {
 		if err := ensureIndexes(ctx, collection); err != nil {
